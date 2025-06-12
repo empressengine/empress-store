@@ -250,7 +250,30 @@ export class Store<T extends Object> {
      * @returns Глубокая копия текущего состояния
      */
     public cloneState(): T {
-        return structuredClone(this._data);
+        const safeDeepClone = (obj: any): any => {
+            if (obj === null || typeof obj !== 'object') {
+                return obj;
+            }
+
+            if (Array.isArray(obj)) {
+                return obj.map(item => safeDeepClone(item));
+            }
+
+            const cloned: any = {};
+            for (const key in obj) {
+                if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                    try {
+                        cloned[key] = safeDeepClone(obj[key]);
+                    } catch (e) {
+                        console.warn(`Failed to clone property ${key}`, e);
+                        cloned[key] = obj[key]; 
+                    }
+                }
+            }
+            return cloned;
+        };
+
+        return safeDeepClone(this._data);
     }
 
     private notifyListeners(): void {
