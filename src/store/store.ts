@@ -268,6 +268,15 @@ export class Store<T extends Object> {
         return this.safeDeepClone(this._data);
     }
 
+    /**
+     * Клонирует предыдущее состояние хранилища. Использует safeDeepClone для глубокого копирования.
+     * 
+     * @returns Глубокая копия предыдущего состояния
+     */
+    public clonePrevState(): T {
+        return this.safeDeepClone(this._prevData);
+    }
+
     private safeDeepClone = (obj: any): any => {
         if (obj === null || typeof obj !== 'object') {
             return obj;
@@ -303,7 +312,7 @@ export class Store<T extends Object> {
                 Store._isNotifying = true;
                 try {
                     Store._pendingNotifications.forEach(store => {
-                        store._listeners.forEach(listener => listener(store._data));
+                        store._listeners.forEach(listener => listener(store._data, store._prevData));
                     });
                 } finally {
                     Store._isNotifying = false;

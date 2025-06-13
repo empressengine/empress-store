@@ -5,7 +5,7 @@ export type StoreState = Record<string, any>;
  * Функция обратного вызова для подписки на изменения в хранилище
  * @param state Текущее состояние после обновления
  */
-export type Listener<T> = (state: T) => void;
+export type Listener<T> = (state: T, prev: T) => void;
 
 /** 
  * Функция middleware для перехвата и преобразования обновлений
