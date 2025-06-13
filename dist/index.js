@@ -178,6 +178,14 @@ const d = class d {
   cloneState() {
     return this.safeDeepClone(this._data);
   }
+  /**
+   * Клонирует предыдущее состояние хранилища. Использует safeDeepClone для глубокого копирования.
+   * 
+   * @returns Глубокая копия предыдущего состояния
+   */
+  clonePrevState() {
+    return this.safeDeepClone(this._prevData);
+  }
   notifyListeners() {
     if (d._isNotifying) {
       d._pendingNotifications.add(this);
@@ -187,7 +195,7 @@ const d = class d {
       d._isNotifying = !0;
       try {
         d._pendingNotifications.forEach((e) => {
-          e._listeners.forEach((a) => a(e._data));
+          e._listeners.forEach((a) => a(e._data, e._prevData));
         });
       } finally {
         d._isNotifying = !1, d._notificationScheduled = !1, d._pendingNotifications.clear();
@@ -197,8 +205,8 @@ const d = class d {
 };
 d._pendingNotifications = /* @__PURE__ */ new Set(), d._isNotifying = !1, d._notificationScheduled = !1;
 let u = d;
-const y = /* @__PURE__ */ new Set();
-function _(h, e) {
+const _ = /* @__PURE__ */ new Set();
+function w(h, e) {
   let a, t = !1;
   const i = Array.isArray(h) ? h : [h], n = () => {
     const s = i.map((r) => r.state);
@@ -211,14 +219,14 @@ function _(h, e) {
     get value() {
       if (t)
         throw new Error("Cannot access disposed computed value");
-      if (y.has(o))
+      if (_.has(o))
         throw new Error("Circular dependency detected in computed properties");
       if (a === void 0) {
-        y.add(o);
+        _.add(o);
         try {
           a = e(n());
         } finally {
-          y.delete(o);
+          _.delete(o);
         }
       }
       return a;
@@ -253,8 +261,8 @@ function v(h, e = {}) {
           c in r.state && r.state[c] !== s[c] && (p[c] = s[c], f = !0);
         if (f) {
           const c = r.update;
-          r.update = function(w) {
-            u.prototype.update.call(this, w);
+          r.update = function(y) {
+            u.prototype.update.call(this, y);
           }, r.update(() => p), r.update = c;
         }
       });
@@ -276,6 +284,6 @@ function v(h, e = {}) {
 }
 export {
   u as Store,
-  _ as computed,
+  w as computed,
   v as mixStores
 };

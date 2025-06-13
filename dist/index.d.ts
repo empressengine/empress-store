@@ -139,7 +139,7 @@ export declare interface ITransaction<T> {
  * Функция обратного вызова для подписки на изменения в хранилище
  * @param state Текущее состояние после обновления
  */
-export declare type Listener<T> = (state: T) => void;
+export declare type Listener<T> = (state: T, prev: T) => void;
 
 /**
  * Функция middleware для перехвата и преобразования обновлений
@@ -381,6 +381,12 @@ export declare class Store<T extends Object> {
      * @returns Глубокая копия текущего состояния
      */
     cloneState(): T;
+    /**
+     * Клонирует предыдущее состояние хранилища. Использует safeDeepClone для глубокого копирования.
+     *
+     * @returns Глубокая копия предыдущего состояния
+     */
+    clonePrevState(): T;
     private safeDeepClone;
     private notifyListeners;
 }
