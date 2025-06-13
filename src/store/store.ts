@@ -50,6 +50,7 @@ export class Store<T extends Object> {
     private static _isNotifying = false;
     private static _notificationScheduled = false;
 
+    private _prevData: T;
     private _listeners: Set<Listener<T>> = new Set();
     private _middleware: Middleware<T>[] = [];
     private _validators: Validator<T>[] = [];
@@ -58,6 +59,7 @@ export class Store<T extends Object> {
         private _data: T,
         options: IStoreOptions<T> = {}
     ) {
+        this._prevData = this.safeDeepClone(this._data);
         this._middleware = options.middleware || [];
         this._validators = options.validators || [];
     }
@@ -129,6 +131,16 @@ export class Store<T extends Object> {
     /**
      * Получить текущее состояние, используя Proxy для предотвращения прямых мутаций
      */
+    /**
+     * Получить предыдущее состояние в виде копии
+     */
+    public get prev(): T {
+        return this.safeDeepClone(this._prevData);
+    }
+
+    /**
+     * Получить текущее состояние
+     */
     public get state(): T {
         return new Proxy(this._data, {
             get: (target, prop) => {
@@ -189,6 +201,7 @@ export class Store<T extends Object> {
             finalState = middleware(finalState, update, applyUpdate);
         }
 
+        this._prevData = this.safeDeepClone(this._data);
         this._data = finalState;
         this.notifyListeners();
     }
@@ -200,6 +213,7 @@ export class Store<T extends Object> {
     public transaction(transaction: ITransaction<T>): void {
         const previousState = this.state;
         try {
+            this._prevData = this.safeDeepClone(this._data);
             this._data = transaction.apply(this.state);
             this.notifyListeners();
         } catch (error) {
@@ -240,41 +254,42 @@ export class Store<T extends Object> {
      * @param initialData Начальные данные для сброса
      */
     public reset(initialData: T = {} as T): void {
+        this._prevData = this.safeDeepClone(this._data);
         this._data = initialData;
         this.notifyListeners();
     }
 
     /**
-     * Клонирует текущее состояние хранилища. Использует structuredClone для глубокого копирования.
+     * Клонирует текущее состояние хранилища. Использует safeDeepClone для глубокого копирования.
      * 
      * @returns Глубокая копия текущего состояния
      */
     public cloneState(): T {
-        const safeDeepClone = (obj: any): any => {
-            if (obj === null || typeof obj !== 'object') {
-                return obj;
-            }
+        return this.safeDeepClone(this._data);
+    }
 
-            if (Array.isArray(obj)) {
-                return obj.map(item => safeDeepClone(item));
-            }
+    private safeDeepClone = (obj: any): any => {
+        if (obj === null || typeof obj !== 'object') {
+            return obj;
+        }
 
-            const cloned: any = {};
-            for (const key in obj) {
-                if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                    try {
-                        cloned[key] = safeDeepClone(obj[key]);
-                    } catch (e) {
-                        console.warn(`Failed to clone property ${key}`, e);
-                        cloned[key] = obj[key]; 
-                    }
+        if (Array.isArray(obj)) {
+            return obj.map(item => this.safeDeepClone(item));
+        }
+
+        const cloned: any = {};
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                try {
+                    cloned[key] = this.safeDeepClone(obj[key]);
+                } catch (e) {
+                    console.warn(`Failed to clone property ${key}`, e);
+                    cloned[key] = obj[key]; 
                 }
             }
-            return cloned;
-        };
-
-        return safeDeepClone(this._data);
-    }
+        }
+        return cloned;
+    };
 
     private notifyListeners(): void {
         if (Store._isNotifying) {
