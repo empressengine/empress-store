@@ -1,6 +1,20 @@
 const d = class d {
-  constructor(e, t = {}) {
-    this._data = e, this._listeners = /* @__PURE__ */ new Set(), this._middleware = [], this._validators = [], this._middleware = t.middleware || [], this._validators = t.validators || [];
+  constructor(e, a = {}) {
+    this._data = e, this._listeners = /* @__PURE__ */ new Set(), this._middleware = [], this._validators = [], this.safeDeepClone = (t) => {
+      if (t === null || typeof t != "object")
+        return t;
+      if (Array.isArray(t))
+        return t.map((n) => this.safeDeepClone(n));
+      const i = {};
+      for (const n in t)
+        if (Object.prototype.hasOwnProperty.call(t, n))
+          try {
+            i[n] = this.safeDeepClone(t[n]);
+          } catch (l) {
+            console.warn(`Failed to clone property ${n}`, l), i[n] = t[n];
+          }
+      return i;
+    }, this._prevData = this.safeDeepClone(this._data), this._middleware = a.middleware || [], this._validators = a.validators || [];
   }
   /**
    * Добавить новое middleware в хранилище
@@ -9,8 +23,8 @@ const d = class d {
    */
   addMiddleware(e) {
     return this._middleware.push(e), () => {
-      const t = this._middleware.indexOf(e);
-      t !== -1 && this._middleware.splice(t, 1);
+      const a = this._middleware.indexOf(e);
+      a !== -1 && this._middleware.splice(a, 1);
     };
   }
   /**
@@ -19,8 +33,8 @@ const d = class d {
    * @returns Функция для удаления всех добавленных middleware
    */
   addMiddlewares(e) {
-    const t = e.map((a) => this.addMiddleware(a));
-    return () => t.forEach((a) => a());
+    const a = e.map((t) => this.addMiddleware(t));
+    return () => a.forEach((t) => t());
   }
   /**
    * Добавить новый валидатор в хранилище
@@ -29,8 +43,8 @@ const d = class d {
    */
   addValidator(e) {
     return this._validators.push(e), () => {
-      const t = this._validators.indexOf(e);
-      t !== -1 && this._validators.splice(t, 1);
+      const a = this._validators.indexOf(e);
+      a !== -1 && this._validators.splice(a, 1);
     };
   }
   /**
@@ -39,8 +53,8 @@ const d = class d {
    * @returns Функция для удаления всех добавленных валидаторов
    */
   addValidators(e) {
-    const t = e.map((a) => this.addValidator(a));
-    return () => t.forEach((a) => a());
+    const a = e.map((t) => this.addValidator(t));
+    return () => a.forEach((t) => t());
   }
   /**
    * Получить текущий middleware
@@ -57,11 +71,20 @@ const d = class d {
   /**
    * Получить текущее состояние, используя Proxy для предотвращения прямых мутаций
    */
+  /**
+   * Получить предыдущее состояние в виде копии
+   */
+  get prev() {
+    return this.safeDeepClone(this._prevData);
+  }
+  /**
+   * Получить текущее состояние
+   */
   get state() {
     return new Proxy(this._data, {
-      get: (e, t) => {
-        const a = e[t];
-        return a instanceof Object ? new Proxy(a, {}) : a;
+      get: (e, a) => {
+        const t = e[a];
+        return t instanceof Object ? new Proxy(t, {}) : t;
       },
       set: () => (console.warn("Direct state mutation is not allowed. Use setState instead."), !1)
     });
@@ -80,10 +103,10 @@ const d = class d {
    * @throws Error если проверка не пройдена
    */
   validateUpdate(e) {
-    for (const t of this._validators) {
-      const a = t(e);
-      if (a !== !0)
-        throw new Error(typeof a == "string" ? a : "Validation failed");
+    for (const a of this._validators) {
+      const t = a(e);
+      if (t !== !0)
+        throw new Error(typeof t == "string" ? t : "Validation failed");
     }
   }
   /**
@@ -99,24 +122,24 @@ const d = class d {
    * ```
    */
   update(e) {
-    const t = e(this.state);
-    this.validateUpdate(t);
-    const a = (u, c) => ({ ...u, ...c });
-    let i = a(this._data, t);
-    for (const u of this._middleware)
-      i = u(i, t, a);
-    this._data = i, this.notifyListeners();
+    const a = e(this.state);
+    this.validateUpdate(a);
+    const t = (n, l) => ({ ...n, ...l });
+    let i = t(this._data, a);
+    for (const n of this._middleware)
+      i = n(i, a, t);
+    this._prevData = this.safeDeepClone(this._data), this._data = i, this.notifyListeners();
   }
   /**
    * Выполнить транзакцию, которая может быть отменена
    * @param transaction Объект транзакции с функциями применения и отката
    */
   transaction(e) {
-    const t = this.state;
+    const a = this.state;
     try {
-      this._data = e.apply(this.state), this.notifyListeners();
-    } catch (a) {
-      throw this._data = e.rollback(t), this.notifyListeners(), a;
+      this._prevData = this.safeDeepClone(this._data), this._data = e.apply(this.state), this.notifyListeners();
+    } catch (t) {
+      throw this._data = e.rollback(a), this.notifyListeners(), t;
     }
   }
   /**
@@ -132,12 +155,12 @@ const d = class d {
    * ```
    */
   simpleTransaction(e) {
-    const t = e(this.state), a = {};
-    Object.keys(t).forEach((i) => {
-      a[i] = this.state[i];
+    const a = e(this.state), t = {};
+    Object.keys(a).forEach((i) => {
+      t[i] = this.state[i];
     }), this.transaction({
-      apply: (i) => ({ ...i, ...t }),
-      rollback: (i) => ({ ...i, ...a })
+      apply: (i) => ({ ...i, ...a }),
+      rollback: (i) => ({ ...i, ...t })
     });
   }
   /**
@@ -145,30 +168,15 @@ const d = class d {
    * @param initialData Начальные данные для сброса
    */
   reset(e = {}) {
-    this._data = e, this.notifyListeners();
+    this._prevData = this.safeDeepClone(this._data), this._data = e, this.notifyListeners();
   }
   /**
-   * Клонирует текущее состояние хранилища. Использует structuredClone для глубокого копирования.
+   * Клонирует текущее состояние хранилища. Использует safeDeepClone для глубокого копирования.
    * 
    * @returns Глубокая копия текущего состояния
    */
   cloneState() {
-    const e = (t) => {
-      if (t === null || typeof t != "object")
-        return t;
-      if (Array.isArray(t))
-        return t.map((i) => e(i));
-      const a = {};
-      for (const i in t)
-        if (Object.prototype.hasOwnProperty.call(t, i))
-          try {
-            a[i] = e(t[i]);
-          } catch (u) {
-            console.warn(`Failed to clone property ${i}`, u), a[i] = t[i];
-          }
-      return a;
-    };
-    return e(this._data);
+    return this.safeDeepClone(this._data);
   }
   notifyListeners() {
     if (d._isNotifying) {
@@ -179,7 +187,7 @@ const d = class d {
       d._isNotifying = !0;
       try {
         d._pendingNotifications.forEach((e) => {
-          e._listeners.forEach((t) => t(e._data));
+          e._listeners.forEach((a) => a(e._data));
         });
       } finally {
         d._isNotifying = !1, d._notificationScheduled = !1, d._pendingNotifications.clear();
@@ -188,86 +196,86 @@ const d = class d {
   }
 };
 d._pendingNotifications = /* @__PURE__ */ new Set(), d._isNotifying = !1, d._notificationScheduled = !1;
-let h = d;
+let u = d;
 const y = /* @__PURE__ */ new Set();
-function m(l, e) {
-  let t, a = !1;
-  const i = Array.isArray(l) ? l : [l], u = () => {
-    const s = i.map((n) => n.state);
-    return Array.isArray(l) ? s : s[0];
-  }, c = i.map(
+function _(h, e) {
+  let a, t = !1;
+  const i = Array.isArray(h) ? h : [h], n = () => {
+    const s = i.map((r) => r.state);
+    return Array.isArray(h) ? s : s[0];
+  }, l = i.map(
     (s) => s.subscribe(() => {
-      a || (t = void 0);
+      t || (a = void 0);
     })
-  ), r = {
+  ), o = {
     get value() {
-      if (a)
+      if (t)
         throw new Error("Cannot access disposed computed value");
-      if (y.has(r))
+      if (y.has(o))
         throw new Error("Circular dependency detected in computed properties");
-      if (t === void 0) {
-        y.add(r);
+      if (a === void 0) {
+        y.add(o);
         try {
-          t = e(u());
+          a = e(n());
         } finally {
-          y.delete(r);
+          y.delete(o);
         }
       }
-      return t;
+      return a;
     },
     dispose() {
-      a || (a = !0, c.forEach((s) => s()), t = void 0);
+      t || (t = !0, l.forEach((s) => s()), a = void 0);
     }
   };
-  return typeof window < "u" && window.addEventListener("unload", () => r.dispose()), r;
+  return typeof window < "u" && window.addEventListener("unload", () => o.dispose()), o;
 }
-function _(l, e = {}) {
-  const t = l.reduce((c, r) => ({
-    ...c,
-    ...r.state
+function v(h, e = {}) {
+  const a = h.reduce((l, o) => ({
+    ...l,
+    ...o.state
   }), {});
-  class a extends h {
+  class t extends u {
     cleanup() {
-      u.forEach((r) => r());
+      n.forEach((o) => o());
     }
-    update(r) {
-      const s = r(this.state);
-      this.validateUpdate(s), l.forEach((n) => {
-        const f = {};
-        let p = !1;
-        for (const o in s)
-          o in n.state && n.state[o] !== s[o] && (f[o] = s[o], p = !0);
-        p && n.validateUpdate(f);
-      }), super.update((n) => s), l.forEach((n) => {
-        const f = {};
-        let p = !1;
-        for (const o in s)
-          o in n.state && n.state[o] !== s[o] && (f[o] = s[o], p = !0);
-        if (p) {
-          const o = n.update;
-          n.update = function(w) {
-            h.prototype.update.call(this, w);
-          }, n.update(() => f), n.update = o;
+    update(o) {
+      const s = o(this.state);
+      this.validateUpdate(s), h.forEach((r) => {
+        const p = {};
+        let f = !1;
+        for (const c in s)
+          c in r.state && r.state[c] !== s[c] && (p[c] = s[c], f = !0);
+        f && r.validateUpdate(p);
+      }), super.update((r) => s), h.forEach((r) => {
+        const p = {};
+        let f = !1;
+        for (const c in s)
+          c in r.state && r.state[c] !== s[c] && (p[c] = s[c], f = !0);
+        if (f) {
+          const c = r.update;
+          r.update = function(w) {
+            u.prototype.update.call(this, w);
+          }, r.update(() => p), r.update = c;
         }
       });
     }
   }
-  const i = new a(t, {
+  const i = new t(a, {
     middleware: e.middleware || [],
     validators: e.validators || []
-  }), u = l.map((c) => {
-    const r = c.update;
-    return c.update = function(s) {
-      const n = this.state, f = s(n);
-      this.validateUpdate(f), i.update((p) => f);
+  }), n = h.map((l) => {
+    const o = l.update;
+    return l.update = function(s) {
+      const r = this.state, p = s(r);
+      this.validateUpdate(p), i.update((f) => p);
     }, () => {
-      c.update = r;
+      l.update = o;
     };
   });
   return i;
 }
 export {
-  h as Store,
-  m as computed,
-  _ as mixStores
+  u as Store,
+  _ as computed,
+  v as mixStores
 };

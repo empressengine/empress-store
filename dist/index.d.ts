@@ -279,6 +279,7 @@ export declare class Store<T extends Object> {
     private static _pendingNotifications;
     private static _isNotifying;
     private static _notificationScheduled;
+    private _prevData;
     private _listeners;
     private _middleware;
     private _validators;
@@ -317,6 +318,13 @@ export declare class Store<T extends Object> {
     protected get rawState(): T;
     /**
      * Получить текущее состояние, используя Proxy для предотвращения прямых мутаций
+     */
+    /**
+     * Получить предыдущее состояние в виде копии
+     */
+    get prev(): T;
+    /**
+     * Получить текущее состояние
      */
     get state(): T;
     /**
@@ -368,11 +376,12 @@ export declare class Store<T extends Object> {
      */
     reset(initialData?: T): void;
     /**
-     * Клонирует текущее состояние хранилища. Использует structuredClone для глубокого копирования.
+     * Клонирует текущее состояние хранилища. Использует safeDeepClone для глубокого копирования.
      *
      * @returns Глубокая копия текущего состояния
      */
     cloneState(): T;
+    private safeDeepClone;
     private notifyListeners;
 }
 
