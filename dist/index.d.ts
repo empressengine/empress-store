@@ -138,6 +138,7 @@ export declare interface ITransaction<T> {
 /**
  * Функция обратного вызова для подписки на изменения в хранилище
  * @param state Текущее состояние после обновления
+ * @param prev Предыдущее состояние до обновления
  */
 export declare type Listener<T> = (state: T, prev: T) => void;
 
