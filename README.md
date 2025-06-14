@@ -1,3 +1,5 @@
+![Empress Logo](https://empressengine.github.io/empress-documentation/assets/images/empress_logo_big_store-6569934567c12e323e193e1c043b4340.png)
+
 # Empress Store
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)]()
@@ -53,7 +55,8 @@ const store = new Store<GameState>({
 });
 
 // Подписка на изменения
-store.subscribe(state => {
+store.subscribe((state, prev) => {
+  console.log('Предыдущее состояние:', prev);
   console.log('Новое состояние:', state);
 });
 
@@ -282,12 +285,12 @@ console.log(`Конверсия: ${conversion.value}%`);
 
 ## Лицензия
 
-EmpressApp распространяется под лицензией MIT.
+Empress Store распространяется под лицензией MIT.
 
 ```text
 MIT License
 
-Copyright (c) 2025 EmpressApp Game Framework
+Copyright (c) 2025 Empress Store Game Framework
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
